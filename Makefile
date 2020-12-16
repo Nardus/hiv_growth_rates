@@ -9,6 +9,10 @@ output/simulations/growth_rate_differs.rds:
 	Rscript scripts/simulations.R
 
 
-# Plots:
 output/plots/simulations.pdf: output/simulations/growth_rate_differs.rds
 	Rscript scripts/plot_simulations.R
+
+
+# Model fits:
+output/model_fit/ifn_full_model.rds: data/IFNa_data_2020_07_31.csv
+	Rscript scripts/fit_growth_models.R
