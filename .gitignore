@@ -1,3 +1,6 @@
+_exploratory/
+output/
+
 # History files
 .Rhistory
 .Rapp.history
