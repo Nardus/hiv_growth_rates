@@ -1,11 +1,14 @@
-#
+# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
 # Utility functions for fitting and summarising logistic growth models
-# 
-
-
 # =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+
+require(nlme)
+require(dplyr)
+require(tidyr)
+require(stringr)
+
+
 # ---- DATA PROCESSING ---------------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
 
 #' Remove downstream observations once growth rate starts decreasing.
 #' 
@@ -94,9 +97,8 @@ prepare_data <- function(data, percent_cutoff, timeseries_identifier = "timeseri
 }
 
 
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+
 # ---- MODEL FITTING ------------------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
 
 #' Fit a logistic growth curve model
 #'
@@ -119,7 +121,8 @@ fit_logistic <- function(model_data, include_interaction = TRUE, starting_k = 30
                 random = list(timeseries_id = K ~ 1),
                 data = model_data,
                 start = c(r = c(2.5, 0, 0, 0),  # Intercept + 3 effects 
-                          K = c(starting_k, 0)))      # Intercept + 1 effect
+                          K = c(starting_k, 0)),      # Intercept + 1 effect
+                method = "ML")
   } else {
     fit <- nlme(infected_count ~ (K*P0*exp(r*time)) / (K + P0*(exp(r*time) - 1)),
                 fixed = list(r ~ treatment + virus,
@@ -127,7 +130,8 @@ fit_logistic <- function(model_data, include_interaction = TRUE, starting_k = 30
                 random = list(timeseries_id = K ~ 1),
                 data = model_data,
                 start = c(r = c(2.5, 0, 0),
-                          K = c(starting_k, 0)))
+                          K = c(starting_k, 0)),
+                method = "ML")
   }
   
   list(data = model_data,
@@ -136,9 +140,7 @@ fit_logistic <- function(model_data, include_interaction = TRUE, starting_k = 30
 
 
 
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
 # ---- BOOTSTRAPPING ------------------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
 
 #' Generate a single hierarchical bootstrap resample of a dataset, based on a fit from `fit_logistic()`
 #' 
@@ -230,9 +232,9 @@ get_boot_fits <- function(fit_obj, n = 100) {
 }
 
 
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+
 # ---- Predictions --------------------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+
 #' Extract predictions from the result of `fit_logistic()`
 #' 
 #' @param fit_obj Fitted model object which includes data.
@@ -249,7 +251,7 @@ get_logistic_predictions <- function(fit_obj, level = 0,
     fit_obj$data %>% 
       mutate(prediction = predict(fit_obj$fit, newdata = ., level = level))
     
-  } else if(level == 0) {
+  } else if (level == 0) {
     fit_obj$data %>% 
       group_by(.data[[treatment_column]], .data$virus, .data$time) %>% 
       summarise(P0 = mean(.data$P0), .groups = "drop") %>% 
@@ -277,10 +279,7 @@ get_logistic_predictions_boot <- function(boot_obj, level = 0,
 #' 
 add_ci <- function(preds, boot_preds) {
   boot_preds %>% 
-    bind_rows(.id = 'percent_cutoff') %>% 
-    mutate(percent_cutoff = factor(.data$percent_cutoff, levels = names(cutoffs))) %>% 
-    
-    group_by(.data$percent_cutoff, .data$treatment, .data$virus, .data$time) %>% 
+    group_by(.data$treatment, .data$virus, .data$time) %>% 
     summarise(lower = quantile(.data$prediction, probs = 0.025),
               upper = quantile(.data$prediction, probs = 0.975),
               P0_lower = quantile(.data$P0, probs = 0.025),
@@ -288,13 +287,44 @@ add_ci <- function(preds, boot_preds) {
               .groups = "drop_last") %>% 
     ungroup() %>% 
     
-    left_join(preds, by = c("percent_cutoff", "treatment", "virus", "time"))
+    left_join(preds, by = c("treatment", "virus", "time"))
 }
 
 
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
-## ---- COEFFICIENTS ------------------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+#' Produce a data frame of model predictions suitable for plotting
+#' 
+#' @param fit a model fit
+#' @param boot_fits a list of model fits to boostrapped data
+#' 
+#' @return A data frame
+prepare_predictions <- function(fit, boot_fits) {
+  # Get predictions
+  preds <- get_logistic_predictions(fit)
+  boot_preds <- get_logistic_predictions_boot(boot_fits)
+  
+  ## Calcuate CI:
+  preds <- add_ci(preds, boot_preds)
+  
+  ## Reverse change made by prepare_data(), so we can illustrate P0 too
+  p0 <- preds %>% 
+    group_by(.data$treatment, .data$virus) %>% 
+    summarise(time = 1,
+              prediction = unique(.data$P0),
+              lower = unique(.data$P0_lower),
+              upper = unique(.data$P0_upper),
+              is_observation = FALSE,
+              .groups = "drop")
+  
+  preds <- preds %>% 
+    mutate(time = .data$time + 1,
+           is_observation = TRUE) %>% 
+    bind_rows(p0)
+}
+
+
+
+# ---- COEFFICIENTS ------------------------------------------------------------------------------
+
 #' Convert coefficient names into human-readable strings
 #' 
 #' @param coef_names A character vector of coefficient labels.
@@ -311,30 +341,32 @@ clean_coef_names <- function(coef_names, viruses, treatment_name) {
     unique()
   
   stopifnot(length(virus_additional) == 1) # Only implemented for two viruses
+  stopifnot(virus_additional %in% viruses)
   
-  virus_baseline <- viruses[viruses != virus_additional]
+  virus_additional <- virus_additional %>% 
+    str_replace("-", " ") %>% 
+    str_replace("6MO", "CC")
   
   # Find matching component (baseline varies)
   component <- str_extract(coef_names, "^[[:alpha:]]+")
   
   stopifnot(all(component %in% c("r", "K")))
-  r_baseline <- paste0("Baseline\n(", virus_baseline, ",\n", treatment_name, "=0)")
-  k_baseline <- paste0("Baseline\n(", treatment_name, "=0)")
+  
+  r_treatment <- paste(treatment_name, "dose")
+  k_treatment <- paste(treatment_name, "toxicity")
   
   # Process names
   clean_names <- coef_names %>% 
     str_remove("^[[:alpha:]]+") %>% 
     str_remove("^\\.") %>% 
     str_replace("\\(Intercept\\)", "Baseline") %>% 
-    str_replace(":", " x ") %>% 
     str_to_sentence() %>% 
-    str_replace("[T|t]reatment", treatment_name) %>% 
-    str_replace("Virus.+", paste0("Virus (", virus_additional, ")")) %>% 
-    str_replace("x virus.+", "x virus")
+    str_replace("Virus.+", "Difference between\nviruses") %>% 
+    str_replace("Treatment:virus.+", paste0("Additional ", treatment_name, "-sensitivity\n(", virus_additional, ")"))
     
   clean_names <- if_else(component == "r", 
-                         str_replace(clean_names, "^Baseline", r_baseline),
-                         str_replace(clean_names, "^Baseline", k_baseline))
+                         str_replace(clean_names, "[T|t]reatment", r_treatment),
+                         str_replace(clean_names, "[T|t]reatment", k_treatment))
   
   clean_names
 }
@@ -357,13 +389,11 @@ get_coefficients <- function(fit_obj, viruses, treatment_name = "Treatment") {
                                  TRUE ~ .data$component),
            effect = clean_coef_names(.data$coefficient, 
                                      viruses = viruses, 
-                                     treatment_name = treatment_name),
-           effect = if_else(grepl(":", .data$coefficient),
-                            paste0(.data$effect, "\ninteraction"),
-                            .data$effect))
+                                     treatment_name = treatment_name))
 }
 
-#' Calculate coefficient 
+
+#' Calculate coefficient confidence intervals
 #' 
 #' @param boot_fits A list of bootstrap fits, as generated by `get_boot_fits()`.
 #' @param viruses Virus present in the fitted dataset (used to identify the baseline).
@@ -380,9 +410,27 @@ get_coefficient_ci <- function(boot_fits, viruses, treatment_name = "Treatment")
 }
 
 
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
-## ---- GROWTH RATE PREDICTIONS -------------------------------------------------------------------
-# =-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=-=-=-=-==-=-=-=
+#' Produce a data frame of coefficients suitable for plotting
+#' 
+#' @param fit a model fit
+#' @param boot_fits a list of model fits to boostrapped data
+#' @param raw_data raw data used to fit models
+#' @param treatment_name name used to label the "treatment" effect
+#' 
+#' @return A data frame.
+prepare_coefs <- function(fit, boot_fits, raw_data, treatment_name = "Treatment") {
+  virus_names <- unique(raw_data$virus)
+  
+  coefs <- get_coefficients(fit, viruses = virus_names, treatment_name = treatment_name)
+  coef_ci <- get_coefficient_ci(boot_fits, viruses = virus_names, treatment_name = treatment_name)
+  
+  coefs <- coefs %>% 
+    left_join(coef_ci, by = c("coefficient", "component", "effect"))
+}
+
+
+
+# ---- GROWTH RATE PREDICTIONS -------------------------------------------------------------------
 # Calculating growth rates is dataset specific, so all functions below expect a dataset-specific
 # function capable of returning growth rates for a single fit and treatment dose
 

@@ -64,7 +64,7 @@ plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_s
                        labels = seq(min(sims$time), max(sims$time), by = 4)) +
     scale_colour_manual(values = VIRUS_COLOURS_SIMULATED, guide = FALSE) +
     
-    labs(x = "Time (days)", y = "Infected cells", shape = NULL, colour = NULL) +
+    labs(x = "Day", y = "Infected cells", shape = NULL, colour = NULL) +
     
     plot_theme +
     theme(plot.margin = margin(t = 20.5, r = 20.5, b = 5.5, l = 5.5))
