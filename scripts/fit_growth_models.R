@@ -72,7 +72,7 @@ get_growth_rate_full <- function(fit_obj, treatment_dose, viruses = virus_names)
     summarise(value = mean(.data$value), .groups = "drop") %>% 
     pivot_wider(names_from = .data$coefficient, values_from = .data$value) %>% 
     transmute(`CH058-TF` = .data$`r.(Intercept)` + .data$r.treatment * treatment_dose,
-              `CH058-6MO` = .data$`CH058-TF` + .data$`r.virusCH058-6MO` + +.data$`r.treatment:virusCH058-6MO` * treatment_dose) %>% 
+              `CH058-6MO` = .data$`CH058-TF` + .data$`r.virusCH058-6MO` + .data$`r.treatment:virusCH058-6MO` * treatment_dose) %>% 
     pivot_longer(everything(), names_to = 'virus', values_to = 'growth_rate') %>% 
     mutate(treatment = treatment_dose)
 }
@@ -80,6 +80,37 @@ get_growth_rate_full <- function(fit_obj, treatment_dose, viruses = virus_names)
 growth_rates_full <- combine_growth_rate_and_ci(model_full, boot_fits_full,
                                                 doses = seq(0, 0.5, by = 0.1),
                                                 growth_rate_fun = get_growth_rate_full)
+
+# Fold difference in growth rates (at dose 0)
+get_fold_change <- function(gr_table, dose = 0) {
+  gr_table %>% 
+    filter(.data$treatment == dose) %>% 
+    select(.data$virus, .data$growth_rate) %>% 
+    pivot_wider(names_from = .data$virus, values_from = .data$growth_rate) %>% 
+    summarise(fold_change = .data$`CH058-6MO`/.data$`CH058-TF`)
+}
+
+growth_rates_full_boot <- lapply(boot_fits_full, get_growth_rate_full, treatment_dose = 0)
+
+growth_rate_difference_boot <- lapply(growth_rates_full_boot, get_fold_change) %>% 
+  bind_rows() %>% 
+  summarise(lower = quantile(.data$fold_change, probs = 0.025),
+            upper = quantile(.data$fold_change, probs = 0.975),
+            .groups = "drop")
+  
+growth_rate_difference <- get_fold_change(growth_rates_full) %>% 
+  bind_cols(growth_rate_difference_boot)
+
+
+# Percent reduction in growth rate for each IFN dose increment
+get_percent_reduction <- function(fit, increment = 0.1, virus_names = unique(data_raw$virus)) {
+  coef_vals <- get_coefficients(fit, viruses = virus_names) %>% 
+    filter(.data$component == "Growth rate") %>% 
+    select(.data$coefficient, .data$value) %>% 
+    pivot_wider(names_from = .data$coefficient, values_from = .data$value)
+  
+  
+}
 
 
 # ---- Output -------------------------------------------------------------------------------------
@@ -92,6 +123,7 @@ saveRDS(boot_fits_full, "output/model_fit/full_boot.rds")
 saveRDS(preds_full, "output/model_fit/full_predictions.rds")
 saveRDS(coefs_full, "output/model_fit/full_coefficients.rds")
 saveRDS(growth_rates_full, "output/model_fit/full_growth_rates.rds")
+saveRDS(growth_rate_difference, "output/model_fit/full_growth_rate_difference.rds")
 
 saveRDS(model_reduced, "output/model_fit/reduced_model.rds")
 saveRDS(boot_fits_reduced, "output/model_fit/reduced_boot.rds")

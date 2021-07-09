@@ -35,7 +35,7 @@ logistic_fun <- function(times, growth_rate, carrying_capacity, starting_pop) {
 #' @return a data frame of population sizes
 #' 
 simulate_logistic <- function(times, growth_rate_1, scaling_factor, relative_impediment, impediment_scaling, 
-                              carrying_capacity, starting_pop = 1000) {
+                              carrying_capacity, starting_pop = 100) {
   # Vectorised over times only:
   stopifnot(length(growth_rate_1) == 1)
   stopifnot(length(scaling_factor) == 1)

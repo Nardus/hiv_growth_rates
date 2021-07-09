@@ -11,7 +11,7 @@ set.seed(20201203)
 
 
 # ---- Only growth rates differ between viruses ---------------------------------------------------
-param_combinations <- expand.grid(scaling_factor = seq(0.6, 0.95, by = 0.05),  # growth rates differ by up to 30%
+param_combinations <- expand.grid(scaling_factor = seq(0.6, 0.95, by = 0.05),  # growth rates differ by up to 40%
                                   relative_impediment = seq(0, 0.9, by = 0.1),
                                   impediment_scaling = 1)  # 1 means impediment equally strong on both viruses
 
@@ -21,7 +21,7 @@ growth_rate_sims <- mapply(simulate_logistic,
                            impediment_scaling = param_combinations$impediment_scaling,
                            
                            MoreArgs = list(growth_rate_1 = 3,
-                                           carrying_capacity = 1e5,
+                                           carrying_capacity = 1e4,
                                            times = seq(1, 10, by = 0.05)),
                            SIMPLIFY = FALSE) %>% 
   bind_rows() %>% 
@@ -32,7 +32,7 @@ growth_rate_sims <- mapply(simulate_logistic,
 # ---- Only level of inhibition differs between viruses -------------------------------------------
 param_combinations <- expand.grid(scaling_factor = 1,                        # growth rates equal
                                   relative_impediment = seq(0, 0.9, by = 0.1),
-                                  impediment_scaling = seq(1.1, 1.8, by = 0.1))  # Impediment up to twice as strong on virus 2
+                                  impediment_scaling = seq(1.1, 1.8, by = 0.1))  # Impediment up to 1.8x as strong on virus 2
 
 inhibition_sims <- mapply(simulate_logistic,
                           scaling_factor = param_combinations$scaling_factor,
@@ -40,7 +40,7 @@ inhibition_sims <- mapply(simulate_logistic,
                           impediment_scaling = param_combinations$impediment_scaling,
                           
                           MoreArgs = list(growth_rate_1 = 3,
-                                          carrying_capacity = 1e5,
+                                          carrying_capacity = 1e4,
                                           times = seq(1, 10, by = 0.05)),
                           SIMPLIFY = FALSE) %>% 
   bind_rows() %>% 

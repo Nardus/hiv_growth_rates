@@ -20,6 +20,3 @@ combined <- plot_grid(p1, p2, nrow = 2,
 
 dir.create("output/plots/", recursive = TRUE)
 ggsave2("output/plots/simulations.pdf", combined, width = 7, height = 8)
-
-
-
