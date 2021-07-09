@@ -11,6 +11,8 @@ PRISM_THEME <- theme_classic(base_size = 9,
                              base_line_size = 0.6,
                              base_rect_size = 0.6) +
   theme(strip.background = element_blank(),
+        plot.title = element_text(colour = "grey10", face = "bold"),
+        plot.subtitle = element_text(colour = "grey10", face = "bold"),
         axis.text = element_text(size = 8, colour = "grey10", face = "bold"),
         axis.title = element_text(colour = "grey10", face = "bold"),
         strip.text = element_text(size = 8, face = "bold"),
@@ -29,4 +31,4 @@ VIRUS_PLOTTING_ORDER <- c("CH058 TF", "CH058 CC")
 
 # Fainter version of these colours
 VIRUS_COLOURS_FAINT <- lighten(VIRUS_COLOURS_DATA, amount = 0.6)
-names(VIRUS_COLOURS_FAINT) <- paste(VIRUS_PLOTTING_ORDER, "(raw data)")
+names(VIRUS_COLOURS_FAINT) <- paste(VIRUS_PLOTTING_ORDER, "(in vitro)")
