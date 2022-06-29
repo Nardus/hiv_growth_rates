@@ -1,6 +1,9 @@
 _exploratory/
 output/
 
+# VScode:
+.vscode
+
 # History files
 .Rhistory
 .Rapp.history

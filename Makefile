@@ -3,7 +3,7 @@
 .PHONY: all
 all: output/plots/simulations.pdf \
      output/plots/model_fits.pdf \
-	 output/plots/coefficients.pdf
+	 output/plots/explanations.pdf
 
 
 # Simulations:
@@ -24,5 +24,5 @@ output/plots/model_fits.pdf: output/model_fit/full_model.rds
 	Rscript scripts/plot_model_fits.R
 
 
-output/plots/coefficients.pdf: output/model_fit/full_model.rds
-	Rscript scripts/plot_coefficients.R
+output/plots/explanations.pdf: output/simulations/growth_rate_differs.rds data/IFNa_data_2020_07_31.csv
+	Rscript scripts/plot_explanations.R
