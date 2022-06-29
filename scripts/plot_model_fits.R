@@ -452,6 +452,6 @@ combined_all <- plot_grid(combined_top, combined_middle, p_growth_effects,
 # ---- Output -------------------------------------------------------------------------------------
 dir.create("output/plots", recursive = TRUE)
 
-cairo_pdf(file = "output/plots/model_fits.pdf", type = "pdf", width = 7, height = 8)
+cairo_pdf(file = "output/plots/model_fits2.pdf", width = 7, height = 8)
 print(combined_all)
 dev.off()
