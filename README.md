@@ -12,6 +12,9 @@ conda env create -f environment.yml
 ```
 
 ## Usage
+
+Re-run all analyses using:
+
 ```
 conda activate hiv_growth_rate
 make
