@@ -1,5 +1,7 @@
 # Logistic growth regression models applied to HIV transmitted founder and chronic control isolates
 
+[![DOI](https://zenodo.org/badge/508808726.svg)](https://zenodo.org/badge/latestdoi/508808726)
+
 Code to fit (and illustrate) the logistic growth models used in Sugrue *et al*. (2021). "The interferon resistance of transmitted HIV-1 is a consequence of enhanced replicative fitness". *Preprint*. [doi:10.1101/2021.12.18.473292](https://doi.org/10.1101/2021.12.18.473292)
 
 ## Requirements
