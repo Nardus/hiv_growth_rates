@@ -16,7 +16,7 @@ require(cowplot)
 #' @param varying_param the key parameter that varies in these simulations (plotted along) 
 #'        vertical axis
 plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_scaling"), 
-                            plot_theme = theme_bw()) {
+                            plot_theme = theme_bw(), title = NULL) {
   
   # Switch depending on parameter displayed:
   varying_param = match.arg(varying_param)
@@ -27,7 +27,7 @@ plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_s
     
     facetting <- facet_grid(rows = vars(scaling_factor), cols = vars(relative_impediment))
     horizontal_label <- expression(bold(textstyle("Growth rate inhibition"))%->%~"")
-    vertical_label <- expression(bold(textstyle("Growth rate difference"))~(r[2]/r[1])%->%~"")
+    vertical_label <- expression(bold(textstyle("Growth rate difference"))%->%~"")
     
   } else {
     if (n_distinct(sims$growth_rate_1) != 1)
@@ -35,7 +35,7 @@ plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_s
     
     facetting <- facet_grid(rows = vars(impediment_scaling), cols = vars(relative_impediment))
     horizontal_label <- expression(bold(textstyle("Baseline growth rate inhibition"))%->%~"")
-    vertical_label <- expression(bold(textstyle("Difference in inhibition strength"))%->%~"")
+    vertical_label <- expression(bold(textstyle("Difference in sensitivity"))%->%~"")
       
   }
   
@@ -45,6 +45,8 @@ plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_s
     mutate(virus = str_replace(.data$virus, "_", " "),
            virus = str_to_sentence(.data$virus),
            relative_impediment = sprintf("%3.0f%%", .data$relative_impediment * 100),
+           scaling_factor = sprintf("%3.0f%%", (1 - .data$scaling_factor) * 100),
+           impediment_scaling = sprintf("%3.0f%%", (.data$impediment_scaling - 1) * 100),
            scaling_factor = factor(.data$scaling_factor, 
                                    levels = rev(unique(.data$scaling_factor))),
            impediment_scaling = factor(.data$impediment_scaling, 
@@ -64,13 +66,15 @@ plot_simulation <- function(sims, varying_param = c("growth_rate", "impediment_s
                        labels = seq(min(sims$time), max(sims$time), by = 4)) +
     scale_colour_manual(values = VIRUS_COLOURS_SIMULATED, guide = FALSE) +
     
-    labs(x = "Day", y = "Infected cells", shape = NULL, colour = NULL) +
+    labs(x = "Day", y = "Infected cells", shape = NULL, colour = NULL,
+         title = title) +
     
     plot_theme +
-    theme(plot.margin = margin(t = 20.5, r = 20.5, b = 5.5, l = 5.5))
+    theme(plot.title = element_text(margin = margin(b = 15)),
+          plot.margin = margin(t = 5.5, r = 15.5, b = 5.5, l = 5.5))
   
   
   ggdraw(p) + 
-    draw_label(horizontal_label, x = 0.55, y = 0.96) +
-    draw_label(vertical_label, x = 0.98, y = 0.5, angle = -90)
+    draw_label(horizontal_label, x = 0.55, y = 0.93, size = 6) +
+    draw_label(vertical_label, x = 0.98, y = 0.5, size = 6, angle = -90)
 }

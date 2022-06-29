@@ -113,7 +113,7 @@ data_plot <- ggplot(data_raw, aes(x = time, y = percent_infected, colour = virus
 # ---- Combine ------------------------------------------------------------------------------------
 combined <- plot_grid(sim_plot, data_plot, ncol = 1,
                       align = "h", axis = "lr",
-                      labels = c("A", "B"))
+                      labels = c("A", "B"), label_size = 10)
 
 dir.create("output/plots/", recursive = TRUE)
 ggsave2("output/plots/explanations.pdf", combined, width = 6, height = 6)
