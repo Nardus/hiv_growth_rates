@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/508808726.svg)](https://zenodo.org/badge/latestdoi/508808726)
 
-Code to fit (and illustrate) the logistic growth models used in Sugrue *et al*. (2021). "The interferon resistance of transmitted HIV-1 is a consequence of enhanced replicative fitness". *Preprint*. [doi:10.1101/2021.12.18.473292](https://doi.org/10.1101/2021.12.18.473292)
+Code to fit (and illustrate) the logistic growth models used in Sugrue *et al*. (2022). *The apparent interferon resistance of transmitted HIV-1 is possibly a consequence of enhanced replicative fitness*. PLOS Pathogens 18[11]: e1010973. [doi:10.1371/journal.ppat.1010973](https://doi.org/10.1371/journal.ppat.1010973).
 
 ## Requirements
 
